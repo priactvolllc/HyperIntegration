@@ -1,0 +1,3 @@
+//@version=6
+indicator('Hybrid Bar Module', overlay=true)
+// placeholder logic

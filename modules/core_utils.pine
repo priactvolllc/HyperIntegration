@@ -1,0 +1,3 @@
+//@version=6
+indicator('Core Utils', overlay=false)
+// common utility functions

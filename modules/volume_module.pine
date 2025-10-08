@@ -1,0 +1,4 @@
+//@version=6
+indicator('Volume Module', overlay=true)
+vol_signal = volume > ta.sma(volume, 20)
+plotshape(vol_signal, style=shape.triangleup, location=location.belowbar, color=color.orange)

@@ -1,0 +1,3 @@
+//@version=6
+indicator('Pitchfork Module', overlay=true)
+// placeholder pitchfork logic

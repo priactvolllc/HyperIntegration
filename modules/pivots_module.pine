@@ -1,0 +1,11 @@
+//@version=6
+indicator('Pivot Edge Module', overlay=true)
+
+market_edge_get(srcHigh, srcLow, p_left, p_right) =>
+    ph = ta.pivothigh(srcHigh, p_left, p_right)
+    pl = ta.pivotlow(srcLow, p_left, p_right)
+    [ph, pl]
+
+[ph, pl] = market_edge_get(high, low, 5, 3)
+plotshape(not na(ph), 'Pivot High', shape.triangledown, location.abovebar, color=color.red)
+plotshape(not na(pl), 'Pivot Low', shape.triangleup, location.belowbar, color=color.green)
