@@ -1,11 +1,17 @@
 //@version=6
-indicator('Pivot Edge Module', overlay=true)
+indicator("HIPA - Pivot Edge Module", overlay=true, max_lines_count=500)
 
+// === PARAMS ===
+p_left  = input.int(5, "Left bars")
+p_right = input.int(3, "Right bars")
+
+// === CORE FUNCTION ===
 market_edge_get(srcHigh, srcLow, p_left, p_right) =>
     ph = ta.pivothigh(srcHigh, p_left, p_right)
     pl = ta.pivotlow(srcLow, p_left, p_right)
     [ph, pl]
 
-[ph, pl] = market_edge_get(high, low, 5, 3)
-plotshape(not na(ph), 'Pivot High', shape.triangledown, location.abovebar, color=color.red)
-plotshape(not na(pl), 'Pivot Low', shape.triangleup, location.belowbar, color=color.green)
+// === MODULE EXECUTION ===
+[ph, pl] = market_edge_get(high, low, p_left, p_right)
+plotshape(not na(ph), "Pivot High", shape.triangledown, location.abovebar, color=color.red)
+plotshape(not na(pl), "Pivot Low", shape.triangleup, location.belowbar, color=color.green)
