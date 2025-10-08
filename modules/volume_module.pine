@@ -1,4 +1,39 @@
 //@version=6
-indicator('Volume Module', overlay=true)
-vol_signal = volume > ta.sma(volume, 20)
-plotshape(vol_signal, style=shape.triangleup, location=location.belowbar, color=color.orange)
+indicator("Volume Footprint Imbalance Module (Function, Clean)", overlay=true, max_boxes_count=500)
+
+// === Function: volume_footprint_get
+volume_footprint_get(imbalance_percent, box_length, use_market_edge, edge_top, edge_bot) =>
+    // --- Volume per bar
+    bull_vol = close > open ? volume : 0
+    bear_vol = close < open ? volume : 0
+    delta_ratio = bull_vol / (bear_vol + 0.0001)
+    threshold = 1 + (imbalance_percent / 100.0)
+    
+    // --- Signals per bar
+    bull_signal = delta_ratio >= threshold
+    bear_signal = delta_ratio <= (1 / threshold)
+    
+    // --- Market Edge Confluence
+    in_edge_zone = true
+    if use_market_edge
+        in_edge_zone := (edge_top != 0.0 and edge_bot != 0.0) and close >= edge_bot and close <= edge_top
+    
+    bull_edge_signal = bull_signal and in_edge_zone
+    bear_edge_signal = bear_signal and in_edge_zone
+    
+    // --- Persistent Boxes Arrays
+    var box[] bull_boxes = array.new_box()
+    var box[] bear_boxes = array.new_box()
+    
+    // --- Draw Boxes on fully closed bars
+    if barstate.isconfirmed
+        if bull_edge_signal
+            array.push(bull_boxes, box.new(left=bar_index, right=bar_index+box_length, top=high, bottom=low, border_color=color.green, border_width=2, bgcolor=color.new(color.green, 80)))
+        if bear_edge_signal
+            array.push(bear_boxes, box.new(left=bar_index, right=bar_index+box_length, top=high, bottom=low, border_color=color.red, border_width=2, bgcolor=color.new(color.red, 80)))
+    
+    // --- Return signals and boxes
+    [bull_edge_signal, bear_edge_signal, bull_boxes, bear_boxes]
+
+// === Example usage
+[bull_signal, bear_signal, bull_boxes, bear_boxes] = volume_footprint_get(100, 3, false, 0.0, 0.0)

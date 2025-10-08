@@ -1,17 +1,19 @@
 //@version=6
-indicator("HIPA - Pivot Edge Module", overlay=true, max_lines_count=500)
+indicator("Market Edge Pivot Box (Custom Length)", overlay=true, max_boxes_count=500)
 
-// === PARAMS ===
-p_left  = input.int(5, "Left bars")
-p_right = input.int(3, "Right bars")
+// === Inputs
+p_left  = input.int(5, "Pivot Left Bars")
+p_right = input.int(3, "Pivot Right Bars")
+box_length = input.int(3, "Box Length (bars)", minval=1)  // Number of bars to extend
 
-// === CORE FUNCTION ===
-market_edge_get(srcHigh, srcLow, p_left, p_right) =>
-    ph = ta.pivothigh(srcHigh, p_left, p_right)
-    pl = ta.pivotlow(srcLow, p_left, p_right)
-    [ph, pl]
+// === Market Edge Detection
+ph = ta.pivothigh(p_left, p_right)
+pl = ta.pivotlow(p_left, p_right)
 
-// === MODULE EXECUTION ===
-[ph, pl] = market_edge_get(high, low, p_left, p_right)
-plotshape(not na(ph), "Pivot High", shape.triangledown, location.abovebar, color=color.red)
-plotshape(not na(pl), "Pivot Low", shape.triangleup, location.belowbar, color=color.green)
+// === Draw pivot high box
+if not na(ph)
+    box.new(        left=bar_index[p_right],        right=bar_index[p_right] + box_length,        top=high[p_right],        bottom=low[p_right],        border_color=color.red,        border_width=2,        bgcolor=color.new(color.red, 80)    )
+
+// === Draw pivot low box
+if not na(pl)
+    box.new(        left=bar_index[p_right],        right=bar_index[p_right] + box_length,        top=high[p_right],        bottom=low[p_right],        border_color=color.green,        border_width=2,        bgcolor=color.new(color.green, 80)    )

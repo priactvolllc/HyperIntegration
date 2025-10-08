@@ -1,3 +1,38 @@
 //@version=6
-indicator('Wyckoff Module', overlay=true)
-// placeholder for accumulation/distribution phase
+indicator("Wyckoff Module (Clean, v6)", overlay=true, max_boxes_count=500)
+
+// --- Global arrays
+var string[] phase_list = array.new_string()
+var float[] support_list = array.new_float()
+var float[] resistance_list = array.new_float()
+var box[] phase_boxes = array.new_box()
+
+// --- Wyckoff function
+wyckoff_detect(_lookback) =>
+    pivot_high = ta.pivothigh(high, _lookback, _lookback)
+    pivot_low  = ta.pivotlow(low, _lookback, _lookback)
+    phase_name = ""
+    box phase_box = na
+
+    if not na(pivot_low)
+        phase_name := "Accumulation"
+        top = not na(pivot_high) ? pivot_high : high
+        bottom = pivot_low
+        if barstate.isconfirmed
+            phase_box := box.new(left=bar_index-_lookback, right=bar_index, top=top, bottom=bottom, border_color=color.blue, bgcolor=color.new(color.blue, 80))
+
+    if not na(pivot_high)
+        phase_name := "Distribution"
+        top = pivot_high
+        bottom = not na(pivot_low) ? pivot_low : low
+        if barstate.isconfirmed
+            phase_box := box.new(left=bar_index-_lookback, right=bar_index, top=top, bottom=bottom, border_color=color.blue, bgcolor=color.new(color.blue, 80))
+
+    if phase_name != ""
+        array.push(phase_list, phase_name)
+        array.push(support_list, pivot_low)
+        array.push(resistance_list, pivot_high)
+        array.push(phase_boxes, phase_box)
+
+// --- Call function (modifies arrays directly)
+wyckoff_detect(10)
