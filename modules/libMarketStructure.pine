@@ -1,0 +1,68 @@
+//@version=6
+indicator("libStructure (Market Structure Module)", overlay=true, max_labels_count=500)
+
+// === INPUTS
+left_bars  = input.int(5, "Left Bars", minval=1)
+right_bars = input.int(2, "Right Bars", minval=1)
+show_labels = input.bool(true, "Show BOS/CHOCH Labels")
+
+// === FUNCTION: Detect swings, BOS, and CHOCH
+structure_detect(_left, _right) =>
+    // Pivot detection
+    swing_high = ta.pivothigh(high, _left, _right)
+    swing_low  = ta.pivotlow(low, _left, _right)
+
+    // Persistent arrays for swings and structure events
+    var float[] swing_highs = array.new_float()
+    var float[] swing_lows  = array.new_float()
+    var string[] swing_types = array.new_string()
+    var label[] labels_bos = array.new_label()
+
+    // Push detected swings
+    if not na(swing_high)
+        array.push(swing_highs, swing_high)
+        array.push(swing_types, "High")
+
+    if not na(swing_low)
+        array.push(swing_lows, swing_low)
+        array.push(swing_types, "Low")
+
+    // Trend and structure logic
+    var string trend = "Neutral"
+    bos_signal = false
+    choch_signal = false
+
+    if array.size(swing_highs) > 1 and array.size(swing_lows) > 1
+        last_high = array.get(swing_highs, array.size(swing_highs)-1)
+        prev_high = array.get(swing_highs, array.size(swing_highs)-2)
+        last_low  = array.get(swing_lows, array.size(swing_lows)-1)
+        prev_low  = array.get(swing_lows, array.size(swing_lows)-2)
+
+        // BOS / CHOCH detection
+        if close > last_high and last_high > prev_high
+            bos_signal := true
+            trend := "Bullish"
+        else if close < last_low and last_low < prev_low
+            bos_signal := true
+            trend := "Bearish"
+        else if (close > prev_low and close < prev_high)
+            choch_signal := true
+            trend := "Transition"
+
+    // Label visualization
+    if show_labels and bos_signal
+        l = label.new(bar_index, high, "BOS", color=color.new(color.green, 0), textcolor=color.white, style=label.style_label_down)
+        array.push(labels_bos, l)
+    if show_labels and choch_signal
+        l = label.new(bar_index, low, "CHOCH", color=color.new(color.red, 0), textcolor=color.white, style=label.style_label_up)
+        array.push(labels_bos, l)
+
+    [trend, bos_signal, choch_signal]
+
+// === MAIN CALL (for standalone testing)
+[trend, bos_signal, choch_signal] = structure_detect(left_bars, right_bars)
+
+// === Visual debugging (optional)
+bgcolor(trend == "Bullish" ? color.new(color.green, 90) : trend == "Bearish" ? color.new(color.red, 90) : na)
+plotshape(bos_signal, title="BOS", color=color.new(color.green, 0), style=shape.triangleup, location=location.abovebar, size=size.tiny)
+plotshape(choch_signal, title="CHOCH", color=color.new(color.red, 0), style=shape.triangledown, location=location.belowbar, size=size.tiny)

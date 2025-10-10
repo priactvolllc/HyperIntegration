@@ -1,0 +1,89 @@
+
+//@version=6
+indicator("libOrderBlock (Order Block Module)", overlay=true, max_boxes_count=500)
+
+// === INPUTS
+show_boxes           = input.bool(true, "Show Order Blocks")
+mitigation_ext_bars  = input.int(20, "Extension bars after creation", minval=1)
+mitigation_buffer    = input.float(0.1, "Mitigation threshold (%)", minval=0.0)
+max_lifespan         = input.int(200, "Max lifespan (bars)", minval=1)
+min_touch_count      = input.int(1, "Touches required to mitigate", minval=1)
+
+// === TYPE: Order Block
+type ob
+    float high
+    float low
+    int   bar_index
+    string direction
+    bool mitigated
+    int   touch_count
+    box   ob_box
+
+// === GLOBAL STATE
+var ob[] active_obs    = array.new<ob>()
+var ob[] mitigated_obs = array.new<ob>()
+
+
+// === FUNCTION: Detect & Update Order Blocks (safe + robust)
+orderblock_detect(_trend, _bos_signal, _choch_signal) =>
+    // 1️⃣ Create new OB when BOS signal detected
+    if _bos_signal
+        new_ob = ob.new()
+        new_ob.bar_index := bar_index
+        new_ob.direction := _trend
+        new_ob.high := high
+        new_ob.low := low
+        new_ob.mitigated := false
+        new_ob.touch_count := 0
+
+        if show_boxes
+            new_ob.ob_box := box.new(left=bar_index, right=bar_index + mitigation_ext_bars, top=new_ob.high, bottom=new_ob.low,
+                                     bgcolor=color.new(_trend == "Bullish" ? color.green : color.red, 80),
+                                     border_color=color.new(color.white, 0))
+        array.push(active_obs, new_ob)
+
+     // 2️⃣ Check existing OBs for mitigation or expiry
+    n = array.size(active_obs)
+    if n > 0
+        // iterate forward, collect indices to remove later
+        var int[] remove_idx = array.new_int()
+        for i = 0 to n - 1
+            this_ob = array.get(active_obs, i)
+
+            if this_ob.bar_index < bar_index
+                // Expiry logic
+                if bar_index - this_ob.bar_index > max_lifespan
+                    if show_boxes and not na(this_ob.ob_box)
+                        box.delete(this_ob.ob_box)
+                    array.push(remove_idx, i)
+                    continue
+
+                // Mitigation condition (with buffer)
+                mitigated_condition = (_trend == "Bullish" and low <= this_ob.high * (1 + mitigation_buffer / 100)) or
+                                      (_trend == "Bearish" and high >= this_ob.low * (1 - mitigation_buffer / 100))
+
+                if mitigated_condition
+                    this_ob.touch_count += 1
+                    if this_ob.touch_count >= min_touch_count
+                        this_ob.mitigated := true
+                        if show_boxes and not na(this_ob.ob_box)
+                            box.set_bgcolor(this_ob.ob_box, color.new(color.gray, 80))
+                            box.set_border_color(this_ob.ob_box, color.new(color.gray, 0))
+                        array.push(mitigated_obs, this_ob)
+                        array.push(remove_idx, i)
+
+        // remove mitigated/expired OBs (reverse remove order to keep indices valid)
+        if array.size(remove_idx) > 0
+            for j = array.size(remove_idx) - 1 to 0
+                idx = array.get(remove_idx, j)
+                array.remove(active_obs, idx)
+
+
+
+// === DEMO / TESTING (Replace with libStructure outputs later)
+bos_signal   = ta.crossover(close, ta.sma(close, 14))
+choch_signal = ta.crossunder(close, ta.sma(close, 14))
+trend        = close > ta.sma(close, 14) ? "Bullish" : "Bearish"
+
+// Run detection each bar
+orderblock_detect(trend, bos_signal, choch_signal)
